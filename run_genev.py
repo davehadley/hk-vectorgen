@@ -240,10 +240,9 @@ class EventRateJob(IJob):
     
     def run(self):
         outfilename = self.filename()
-        if os.path.exists(outfilename):
-            os.remove(outfilename)
         if not os.path.exists(outfilename):
             self._create_event_rate()
+        return
     
     def _create_event_rate(self):
         outfilename = _abspath(self.filename())
@@ -269,20 +268,83 @@ class EventRateJob(IJob):
         #setupneutcmd = "source /home/software/neut/setupNeut.sh" # TODO : move this to constants somewhere.
         #cmd = " && ".join((setupneutcmd, cmd))
         self._check_call(cmd)
+        return
     
     def verify(self):
         pass
 
 ###############################################################################
 
-#/home/software/neut/neut_5.1.4.2/src/neutgeom/genev  -j flux_files.root -g nd280geometry.root -v +Basket -o test.genev.output.2.root -n 10 -f rootracker -i setup_output.root -d 5 2>&1
+class GenEvConfig:
+    def __init__(self, num_events):
+        self.num_events = num_events
+    
+    @property
+    def name(self):
+        return "_".join((str(self.num_events),
+                  ))
+    
+###############################################################################
 
 class GenEvJob(IJob):
-    def __init__(self, gen_config, beam_input, geometry, test=False):
+    def __init__(self, gen_config, beam_input, geometry, eventratejob, test=False):
         super(GenEvJob, self).__init__(test)
         self._gen_config = gen_config
         self._beam_input = beam_input
         self._geometry = geometry
+        self._eventrate = eventratejob
+        
+    def filename(self):
+        beamname = self._beam_input.name
+        geomname = self._geometry.name
+        configname = self._gen_config.name
+        outfilename = "_".join(("genev",
+                               beamname,
+                               geomname,
+                               configname,
+                               )) + ".root"
+        return outfilename
+    
+    def run(self):
+        outfilename = self.filename()
+        if not os.path.exists(outfilename):
+            self._create_genev()
+        return
+
+#genev  -j flux_files.root -g nd280geometry.root -v +Basket -o test.genev.output.2.root -n 10 -f rootracker -i setup_output.root -d 5 2>&1
+
+    def _create_genev(self):
+        outfilename = _abspath(self.filename())
+        beamfile = _abspath(self._beam_input.filename())
+        geomfile = _abspath(self._geometry.filename())
+        eventratefile = _abspath(self._eventrate.filename())
+        volumename = self._geometry.volume_name()
+        plane = self._geometry.plane()
+        planenum = plane.ndcode
+        neutgeompath = os.environ["NEUTGEOM"]
+        numevents = self._gen_config.num_events
+        cmd = " ".join((
+                        os.sep.join((neutgeompath, "genev")),
+                        "-j",
+                        beamfile,
+                        "-g",
+                        geomfile,
+                        "-v",
+                        "+" + volumename,
+                        "-o",
+                        outfilename,
+                        "-d",
+                        str(planenum),
+                        "-n",
+                        str(numevents),
+                        "-f rootracker",
+                        "-i",
+                        eventratefile,
+                        ))
+        #setupneutcmd = "source /home/software/neut/setupNeut.sh" # TODO : move this to constants somewhere.
+        #cmd = " && ".join((setupneutcmd, cmd))
+        self._check_call(cmd)
+        return
 
 ###############################################################################
 
@@ -297,10 +359,14 @@ class CompleteJob(IJob):
         beam_input = self._beam_input
         geometry = self._geometry
         gen_config = self._gen_config
-        jobs = [MergeFluxJob(beam_input, test=self._test),
-                CreateGeometryJob(geometry, test=self._test),
-                EventRateJob(beam_input, geometry, test=self._test),
-                GenEvJob(gen_config, beam_input, geometry, test=self._test),
+        job_flux = MergeFluxJob(beam_input, test=self._test)
+        job_creategeometry = CreateGeometryJob(geometry, test=self._test)
+        job_evrate = EventRateJob(beam_input, geometry, test=self._test)
+        job_genev = GenEvJob(gen_config, beam_input, geometry, job_evrate, test=self._test)
+        jobs = [job_flux,
+                job_creategeometry,
+                job_evrate,
+                job_genev,
                 ]
         for j in jobs:
             j.verify()
@@ -335,7 +401,7 @@ def run(opt):
     beam_input = BeamInput(jobname, filelist)
     #geometry = Geometry(ndid=DetectorId.ND280, radius=2.0, z=4.0, orientation=Orientation.Z)
     geometry = Geometry(ndid=DetectorId.ND2K, radius=4.0, z=8.0, orientation=Orientation.Z)
-    gen_config = None
+    gen_config = GenEvConfig(10)
     job = CompleteJob(beam_input, geometry, gen_config, test=False)
     job.run()
     return
