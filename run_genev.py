@@ -115,7 +115,7 @@ class MergeFluxJob(IJob):
     
     def _run_hadd(self):
         cmd = " ".join(("hadd",
-                       self._filename(),
+                       self._beam_input.filename(),
                        " ".join(self._beam_input.filelist()
                         )),
                )
