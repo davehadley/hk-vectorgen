@@ -258,6 +258,23 @@ class PlotInteractionRate:
 #         name = os.sep.join(("hist_2d", "xy"))
 #         yield name, fig
 
+###############################################################################
+
+class PlotFluxIntXsec:
+    def __init__(self, neutindices, neutdata, fluxindices, fluxdata, scale_to_m = 1.0/100.0):
+        self._neut_indices = neutindices
+        self._neut_data = neutdata
+        self._fluxindices = fluxindices
+        self._fluxdata = fluxdata
+        self._scale_to_m = scale_to_m
+    
+    def __iter__(self):
+        return self._plot()
+        
+    def _plot(self):
+        yield figname, fig
+            
+
 ###############################################################################        
 
 def plot_interaction_rate(args):
@@ -276,13 +293,33 @@ def plot_flux(args):
     indices, data = reader.read()
     
     DetectorId = nuOscillation.model.beam.constants.DetectorId
-    ndid = DetectorId.toint(DetectorId.ND280)
+    ndid = DetectorId.toint(DetectorId.ND2K)
     #filter out particular near detector
     data = data[data[:, indices[Record.ndid]] == ndid]
     out = nuOscillation.plot.io.FigureWriter()
     cm_to_m = 1.0/100.0
     plotter = PlotInteractionRate("flux", indices, data, scale_to_m = cm_to_m)
     out(plotter)
+
+###############################################################################
+
+def plot_flux_int_xsec(args):
+    #load neut data
+    reader = NeutFileReader(args.patterns)
+    neutindices, neutdata = reader.read()
+    #load flux data
+    ntuple = nuOscillation.model.beam.FluxNtuple(runtime.getcontext().beamcontext)
+    reader = FluxFileReader([ntuple.filename()])
+    fluxindices, fluxdata = reader.read()
+    DetectorId = nuOscillation.model.beam.constants.DetectorId
+    ndid = DetectorId.toint(DetectorId.ND2K)
+    #filter out particular near detector
+    fluxdata = fluxdata[fluxdata[:, fluxindices[Record.ndid]] == ndid]
+    #make plot
+    out = nuOscillation.plot.io.FigureWriter()
+    cm_to_m = 1.0 / 100.0
+    plotter = PlotFluxIntXsec(neutindices, neutdata, fluxindices, fluxdata, scale_to_m = cm_to_m)
+    out(plotter) 
 
 ###############################################################################
 
