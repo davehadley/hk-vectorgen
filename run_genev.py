@@ -1,3 +1,6 @@
+import ROOT
+ROOT.PyConfig.IgnoreCommandLineOptions = True
+
 import subprocess
 import os
 import glob
@@ -5,7 +8,7 @@ import argparse
 import nuOscillation
 import itertools
 import collections
-import ROOT
+import nuOscillation.model
 
 DetectorId = nuOscillation.model.constants.DetectorId
 
@@ -338,6 +341,7 @@ class GenEvJob(IJob):
                         "-n",
                         str(numevents),
                         "-f rootracker",
+                        #"-f neut",
                         "-i",
                         eventratefile,
                         ))
@@ -391,6 +395,11 @@ def getjobname(opt):
 ###############################################################################
 
 def run(opt):
+    ndid = opt.flux
+    radius = opt.radius
+    polarity = opt.polarity
+    z = opt.z
+    nevents = opt.n
     jobname = getjobname(opt)
     beamcontext = nuOscillation.model.runtime.getcontext().beamcontext
     jnubeamfiles = beamcontext.jnubeamfiles()
@@ -400,8 +409,8 @@ def run(opt):
         filelist = jnubeamfiles.antinu_flux_files
     beam_input = BeamInput(jobname, filelist)
     #geometry = Geometry(ndid=DetectorId.ND280, radius=2.0, z=4.0, orientation=Orientation.Z)
-    geometry = Geometry(ndid=DetectorId.ND2K, radius=4.0, z=8.0, orientation=Orientation.Z)
-    gen_config = GenEvConfig(10)
+    geometry = Geometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z)
+    gen_config = GenEvConfig(num_events=nevents)
     job = CompleteJob(beam_input, geometry, gen_config, test=False)
     job.run()
     return
@@ -410,7 +419,11 @@ def run(opt):
 
 def parsecml():
     parser = argparse.ArgumentParser()
-    parser.add_argument("polarity", type=int, choices=[-1, 1], help="+1 to run neutrino, -1 to run anti-neutrino.")
+    parser.add_argument("polarity", type=int, choices=[-1, 1], help="+1 to run neutrino, -1 to run anti-neutrino.", default=1)
+    parser.add_argument("radius", type=float, help="Set radius of cyclinder in m.")
+    parser.add_argument("z", type=float, help="Set z of cyclinder in m.")
+    parser.add_argument("flux", type=str, choices=DetectorId.ALL, help="choose flux plane.")
+    parser.add_argument("-n", "--nevents", dest="n", type=int, default=1000)
     return parser.parse_args()
 
 def main():
