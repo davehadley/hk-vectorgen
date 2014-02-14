@@ -5,12 +5,12 @@ import subprocess
 import os
 import glob
 import argparse
-import nuOscillation
+import nuosc
 import itertools
 import collections
-import nuOscillation.model
+import nuosc.model
 
-DetectorId = nuOscillation.model.constants.DetectorId
+DetectorId = nuosc.model.constants.DetectorId
 
 #Jobs:
 #    (1) Merge flux files.
@@ -401,7 +401,7 @@ def run(opt):
     z = opt.z
     nevents = opt.n
     jobname = getjobname(opt)
-    beamcontext = nuOscillation.model.runtime.getcontext().beamcontext
+    beamcontext = nuosc.model.runtime.getcontext().beamcontext
     jnubeamfiles = beamcontext.jnubeamfiles()
     if opt.polarity == 1:
         filelist = jnubeamfiles.nu_flux_files

@@ -1,18 +1,18 @@
 import argparse
 import glob
 import itertools
-from nuOscillation.tools import cache, progress
+from nuosc.tools import cache, progress
 import numpy
 import ROOT
 import math
 import simplot.io
-import nuOscillation.model
+import nuosc.model
 from simplot import histogram
 import matplotlib.pyplot as plt 
 import os
 import scipy.stats
 import matplotlib
-from nuOscillation.model import constants, runtime
+from nuosc.model import constants, runtime
 import collections
 import re
 import scipy.interpolate
@@ -48,7 +48,7 @@ class FileNameParser:
             return None
         polarity = match.group(1)
         det = match.group(2)
-        ndid = nuOscillation.model.constants.DetectorId.tostring(det)
+        ndid = nuosc.model.constants.DetectorId.tostring(det)
         r = float(int(match.group(3))) / 100.0
         z = float(int(match.group(4))) / 100.0
         orientation = match.group(5)
@@ -517,12 +517,12 @@ def plot_interaction_rate(args):
 ###############################################################################
 
 def plot_flux(args):
-    ntuple = nuOscillation.model.beam.FluxNtuple(runtime.getcontext().beamcontext)
+    ntuple = nuosc.model.beam.FluxNtuple(runtime.getcontext().beamcontext)
     reader = FluxFileReader([ntuple.filename()])
     indices, data = reader.read()
-    DetectorId = nuOscillation.model.beam.constants.DetectorId
+    DetectorId = nuosc.model.beam.constants.DetectorId
     out = simplot.io.FigureWriter()
-    for polarity in nuOscillation.model.constants.Polarity.ALL:
+    for polarity in nuosc.model.constants.Polarity.ALL:
         for ndid in DetectorId.ALL:
             #filter out particular near detector
             indid = DetectorId.toint(ndid)
@@ -551,10 +551,10 @@ def plot_flux_int_xsec(args):
     reader = NeutFileReader(args.patterns)
     neutindices, neutdata = reader.read()
     #load flux data
-    ntuple = nuOscillation.model.beam.FluxNtuple(runtime.getcontext().beamcontext)
+    ntuple = nuosc.model.beam.FluxNtuple(runtime.getcontext().beamcontext)
     reader = FluxFileReader([ntuple.filename()])
     fluxindices, fluxdata = reader.read()
-    DetectorId = nuOscillation.model.beam.constants.DetectorId
+    DetectorId = nuosc.model.beam.constants.DetectorId
     ndid = DetectorId.toint(f.ndid)
     #filter out particular near detector
     fluxdata = fluxdata[fluxdata[:, fluxindices[Record.ndid]] == ndid]
