@@ -35,9 +35,9 @@ def chktrack2(inputfile, outputfile):
         z = vtx[2] * m_to_cm
         t = vtx[3] * m_to_cm
     
-        fcomp.write("$ begin\n");
-        fcomp.write("$ nuance %d\n" % mode);
-        fcomp.write("$ vertex %5.4f %5.4f %5.4f %5.4f\n" % (x, y, z, t) );
+        fcomp.write(" $begin %d\n" % j);
+        fcomp.write(" $nuance %d\n" % mode);
+        fcomp.write(" $vertex %5.4f %5.4f %5.4f %5.4f\n" % (x, y, z, t) );
 
         npart = entry.StdHepN
         stdhepp4 = ROOT.getRooTrackerHepP4(entry.StdHepN, entry.StdHepP4)
@@ -81,13 +81,14 @@ def chktrack2(inputfile, outputfile):
 
             if pid > 10000:
                 continue;
-            tracklist.append("$ track %d %5.4f %5.4f %5.4f %5.4f %d\n" % (pid, pvec.E(), cosz, cosx, cosy, stat))
+            tracklist.append(" $track %d %5.4f %5.4f %5.4f %5.4f %d\n" % (pid, pvec.E(), cosz, cosx, cosy, stat))
         #insert the info line into the tracklist
-        infoline = "$ info 0 0 %d\n" % j
-        tracklist.insert(infoline_index, infoline)
+        #infoline = " $info 0 0 %d\n" % j
+        #tracklist.insert(infoline_index, infoline)
         for trk in tracklist:
             fcomp.write(trk)
-        fcomp.write("$ end\n");
+        #fcomp.write(" $headerend %d\n" % j);
+        fcomp.write(" $end %d\n" % j);
     fcomp.close()
     return
 

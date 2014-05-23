@@ -28,7 +28,6 @@ class FileNameParser:
     def __init__(self, patterns):
         self._flist = _expandfilelist(patterns)
         
-        
     def __call__(self):
         r = None
         fname = self._flist[0]
@@ -42,17 +41,18 @@ class FileNameParser:
         return r
     
     def _parse_genev(self, fname):
-        pat = "genev_(.*?)_(.*?)_r(.*?)_z(.*?)_(.)_(.*?).root"
+        pat = "genev_(.*?)_(.*?)_(.*?)_.(.*?)_z(.*?)_(.)_(.*?).root"
         match = re.search(pat, fname)
         if not match:
             return None
         polarity = match.group(1)
         det = match.group(2)
         ndid = nuosc.model.constants.DetectorId.tostring(det)
-        r = float(int(match.group(3))) / 100.0
-        z = float(int(match.group(4))) / 100.0
-        orientation = match.group(5)
-        n = match.group(6)
+        geo = match.group(3)
+        r = float(int(match.group(4))) / 100.0
+        z = float(int(match.group(5))) / 100.0
+        orientation = match.group(6)
+        n = match.group(7)
         return GenEvFile(polarity=polarity,
                   ndid=ndid,
                   r=r,
@@ -263,6 +263,8 @@ class PlotInteractionRate:
         if len(self._data):
             for p in self._plot_xy_hist():
                 yield p
+            for p in self._plot_xz_hist():
+                yield p
 #             for p in self._plot_histograms():
 #                 yield p
     
@@ -298,10 +300,34 @@ class PlotInteractionRate:
         dy *= self._scale_to_m
         weights = self._data[:, self._indices[Record.weight]]
         #Plot data
-        xmin = -4.0
-        xmax = 4.0
+        xmin = -10.0
+        xmax = 10.0
         prange = ((xmin, xmax), (xmin, xmax))
         ret = ax.hist2d(dx, dy, bins=self._numbins, weights=weights, cmap=matplotlib.cm.get_cmap("hot"), range=prange)
+        img = ret[-1]
+        fig.colorbar(img)
+        yield name, fig
+
+    def _plot_xz_hist(self):
+        fig = plt.figure()
+        name = os.sep.join((self._outdir, "hist_2d", "xz"))
+        if self._namemod is not None:
+            name += "_" + self._namemod
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_xlabel(Record.label(Record.x))
+        ax.set_ylabel(Record.label(Record.z))
+        #Get data
+        dx = self._data[:, self._indices[Record.x]]
+        dz = self._data[:, self._indices[Record.z]]
+        #scale dx and dy
+        dx *= self._scale_to_m
+        dz *= self._scale_to_m
+        weights = self._data[:, self._indices[Record.weight]]
+        #Plot data
+        #xmin = -4.0
+        #xmax = 4.0
+        #prange = ((xmin, xmax), (xmin, xmax))
+        ret = ax.hist2d(dx, dz, bins=self._numbins, weights=weights, cmap=matplotlib.cm.get_cmap("hot"), )#range=prange)
         img = ret[-1]
         fig.colorbar(img)
         yield name, fig
@@ -509,7 +535,7 @@ def plot_interaction_rate(args):
     name = "_".join([f.polarity, f.ndid])
     plotter = PlotInteractionRate("evgen", indices, data,
                                   namemod=name,
-                                  numbins=10,
+                                  numbins=100,
                                   )
     out(plotter)
     return
