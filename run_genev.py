@@ -419,12 +419,25 @@ class EventRateJob(IJob):
 ###############################################################################
 
 class GenEvConfig:
-    def __init__(self, num_events):
+    def __init__(self, num_events, nu_pdg):
         self.num_events = num_events
+        if nu_pdg is None:
+            nu_pdg = 0
+        self.nu_pdg = nu_pdg
+        self._nu_pdg_names = {0 : "allnuflav",
+                              12 : "nue",
+                              14 : "numu",
+                              -12 : "antinue",
+                              -14 : "antinumu",
+                              }
+        if (self.nu_pdg is not None) and (not self.nu_pdg in self._nu_pdg_names):
+            raise Exception("unknown neutrino PDG", self.nu_pdg)
     
     @property
     def name(self):
+        nupdgname = self._nu_pdg_names[self.nu_pdg]
         return "_".join((str(self.num_events),
+                         nupdgname,
                   ))
     
 ###############################################################################
@@ -472,6 +485,7 @@ class GenEvJob(IJob):
         planenum = plane.ndcode
         neutgeompath = os.environ["NEUTGEOM"]
         numevents = self._gen_config.num_events
+        nupdg = self._gen_config.nu_pdg
         cmd = " ".join((
                         os.sep.join((neutgeompath, "genev")),
                         #"-j", beamfile,
@@ -491,6 +505,8 @@ class GenEvJob(IJob):
                         "-i",
                         eventratefile,
                         "-w 1 ", #rewind the flux file
+                        "-p", 
+                        str(nupdg),
                         ))
         #setupneutcmd = "source /home/software/neut/setupNeut.sh" # TODO : move this to constants somewhere.
         #cmd = " && ".join((setupneutcmd, cmd))
@@ -551,6 +567,7 @@ def run(opt):
     polarity = opt.polarity
     z = opt.z
     nevents = opt.n
+    nu_pdg = opt.pdg
     jobname = getjobname(opt)
     #beamcontext = runtime.getcontext().beamcontext
     #nu_flux_files = glob.glob(_abspath("~/t2k/data/irods/QMULZone2/home/hyperk/fluxes/fluka_flux/numode/*.root"))
@@ -578,7 +595,7 @@ def run(opt):
         geometry = CylinderGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
     else:
         geometry = CuboidGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
-    gen_config = GenEvConfig(num_events=nevents)
+    gen_config = GenEvConfig(num_events=nevents, nu_pdg=nu_pdg)
     job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir)
     job.run()
     return
@@ -594,6 +611,7 @@ def parsecml():
     parser.add_argument("--geometry", type=str, choices=["cylinder", "cuboid"], help="choose geoetry type", default="cuboid")
     parser.add_argument("-c", "--card", type=str, default=None)
     parser.add_argument("-n", "--nevents", dest="n", type=int, default=1000)
+    parser.add_argument("-p", "--pdg", dest="pdg", type=int, choices=[-14, -12, 12, 14], default=None)
     parser.add_argument("-t", "--test", dest="test", type=bool, default=False)
     return parser.parse_args()
 
