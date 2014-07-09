@@ -6,7 +6,7 @@ import argparse
 
 ###############################################################################
 
-def chktrack2(inputfile, outputfile, wcsim=False):
+def chktrack2(inputfile, outputfile, wcsim=True):
 #   Int_t i, j;
 #   Int_t nevents;
 #   double cosx,cosy,cosz;
@@ -40,9 +40,9 @@ def chktrack2(inputfile, outputfile, wcsim=False):
         z = vtx[2] * m_to_cm
         t = vtx[3] * m_to_cm
     
-        fcomp.write(" $begin %d\n" % j);
-        fcomp.write(" $nuance %d\n" % mode);
-        fcomp.write(" $vertex %5.4f %5.4f %5.4f %5.4f\n" % (x, y, z, t) );
+        fcomp.write("$ begin \n");
+        fcomp.write("$ nuance %d\n" % mode);
+        fcomp.write("$ vertex %5.4f %5.4f %5.4f %5.4f\n" % (x, y, z, t) );
 
         npart = entry.StdHepN
         stdhepp4 = ROOT.getRooTrackerHepP4(entry.StdHepN, entry.StdHepP4)
@@ -86,15 +86,15 @@ def chktrack2(inputfile, outputfile, wcsim=False):
 
             if pid > 10000:
                 continue;
-            tracklist.append(" $track %d %5.4f %5.4f %5.4f %5.4f %d\n" % (pid, pvec.E(), cosx, cosy, cosz, stat))
+            tracklist.append("$ track %d %5.4f %5.4f %5.4f %5.4f %d\n" % (pid, pvec.E(), cosx, cosy, cosz, stat))
         if wcsim:
             #insert the info line into the tracklist
-            infoline = " $info 0 0 %d\n" % j
+            infoline = "$ info 0 0 %d\n" % j
             tracklist.insert(infoline_index, infoline)
         for trk in tracklist:
             fcomp.write(trk)
         #fcomp.write(" $headerend %d\n" % j);
-        fcomp.write(" $end %d\n" % j);
+        fcomp.write("$ end %d\n" % j);
     fcomp.close()
     return
 
@@ -122,7 +122,7 @@ def getfilenames(opt):
         #automatically determine output file name
         if not ("genev" in inname and ".root" in inname):
             raise Exception("Cannot automatically determine outputfile name from input. You must specify it manually with the -")
-        outname = inname.replace("genev", "nuance").replace(".root", ".dat")
+        outname = inname.replace("genev", "nuancewcsim").replace(".root", ".dat")
     return inname, outname
 
 ###############################################################################
