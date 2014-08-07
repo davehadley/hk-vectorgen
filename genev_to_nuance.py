@@ -122,7 +122,7 @@ def getfilenames(opt):
         #automatically determine output file name
         if not ("genev" in inname and ".root" in inname):
             raise Exception("Cannot automatically determine outputfile name from input. You must specify it manually with the -")
-        outname = inname.replace("genev", "nuance").replace(".root", ".dat")
+        outname = inname.replace("genev", "nuancewcsandbox").replace(".root", ".dat")
     return inname, outname
 
 ###############################################################################
