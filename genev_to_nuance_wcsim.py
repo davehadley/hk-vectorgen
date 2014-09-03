@@ -40,7 +40,7 @@ def chktrack2(inputfile, outputfile, wcsim=True):
         z = vtx[2] * m_to_cm
         t = vtx[3] * m_to_cm
     
-        fcomp.write("$ begin \n");
+        fcomp.write("$ begin\n");
         fcomp.write("$ nuance %d\n" % mode);
         fcomp.write("$ vertex %5.4f %5.4f %5.4f %5.4f\n" % (x, y, z, t) );
 
