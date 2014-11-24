@@ -7,11 +7,11 @@ import subprocess
 import os
 import glob
 import argparse
-import nuosc
 import itertools
 import collections
-import nuosc.model
-import nuosc.model.runtime as runtime
+import runtime
+
+from simplot.batch import warwickcluster
 
 #Jobs:
 #    (1) Merge flux files.
@@ -81,43 +81,13 @@ def plane_from_ndid(ndid, context):
 ###############################################################################
         
 class RunDir:
-    def __init__(self, path=None, card=None):
+    def __init__(self, path=None):
         if path is None:
             path = tempfile.mkdtemp(prefix="tmp_run_genev_")
         self._rundir = _abspath(path)
-        #self._card = self._find_card(card)
-        #self._run_make_links()
-        
+
     def rundir(self):
         return self._rundir
-    
-#     def _find_card(self, card):
-#         if card is None:
-#             #use default from NEUTGEOM directory
-#             card = "".join((os.environ["NEUT_ROOT"], os.sep, "src/neutgeom/neut.card"))
-#         card = _abspath(card)
-#         if not os.path.exists(card):
-#             raise Exception("Cannot find card file", card)
-#         return card
-#     
-#     def _run_make_links(self):
-#         outdir = self.rundir()
-#         try:
-#             os.makedirs(outdir)
-#         except os.error:
-#             #ignore as this happens if directory already exists
-#             pass
-#         inputdir = "".join((os.environ["NEUT_ROOT"], os.sep, "src", os.sep, "neutsmpl"))
-#         for fname in os.listdir(inputdir):
-#             src = "".join((inputdir, os.sep, fname))
-#             if os.path.islink(src):
-#                 dst = "".join((self.rundir(), os.sep, fname))
-#                 if not os.path.exists(dst):
-#                     os.symlink(src, dst)
-#         src = self._card
-#         dst = "".join((self.rundir(), os.sep, "neut.card"))
-#         shutil.copyfile(src, dst)
-#         return
 
 ###############################################################################
 
@@ -170,10 +140,11 @@ class MergeFluxJob(IJob):
 ###############################################################################
         
 class MakeFluxLinks(IJob):
-    def __init__(self, beam_input, rundir=None, test=False, n=None):
+    def __init__(self, beam_input, rundir=None, test=False, n=None, docopy=False):
         super(MakeFluxLinks, self).__init__(rundir, test)
         self._n = n
         self._beam_input = beam_input
+        self._copy = docopy
         
     def run(self):
         if not os.path.exists(self._beam_input.filename()):
@@ -197,7 +168,10 @@ class MakeFluxLinks(IJob):
             src = fname
             dst = "".join((self._rundir.rundir(), os.sep, self._beam_input.filestem(), ".", str(i), ".root"))
             if not os.path.exists(dst):
-                os.symlink(src, dst)
+                if self._copy:
+                    shutil.copy2(src, dst)
+                else:
+                    os.symlink(src, dst)
         return
 
 ###############################################################################
@@ -423,13 +397,19 @@ class EventRateJob(IJob):
 ###############################################################################
 
 class GenEvConfig:
-    def __init__(self, num_events):
+    def __init__(self, num_events, run_num, startseed=1721827):
         self.num_events = num_events
+        self.run_num = run_num
+        self._startingseed = startseed
+
+    @property
+    def seed(self):
+        return self._startingseed + self.run_num
     
     @property
     def name(self):
-        return "_".join((str(self.num_events),
-                  ))
+        return "_".join((str(self._startingseed), str(self.run_num),
+        ))
     
 ###############################################################################
 
@@ -441,7 +421,7 @@ class GenieEvJob(IJob):
         self._geometry = geometry
         self._eventrate = eventratejob
         self._maxfiles = maxfiles
-        
+
     def filename(self):
         beamname = self._beam_input.name
         geomname = self._geometry.name
@@ -450,7 +430,7 @@ class GenieEvJob(IJob):
                                beamname,
                                geomname,
                                configname,
-                               )) + ".0.ghep.root"
+                               )) + "." + ".0.ghep.root"
         return outfilename
     
     def run(self):
@@ -478,15 +458,14 @@ class GenieEvJob(IJob):
         plane = self._geometry.plane()
         planenum = plane.ndcode
         numevents = self._gen_config.num_events
-        runnum = 1000
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
-        outfileprefix = outfilename.split(".root")[0]
+        outfileprefix = outfilename.split(".0.ghep.root")[0]
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         "-n", str(numevents),
-                        "--run", str(runnum),
-                        "--seed", str(1721827),
+                        "--run", str(self._gen_config.run_num),
+                        "--seed", str(self._gen_config.seed),
                         "--cross-sections", splinesfile,
                         "--message-thresholds ${GENIE}/config/Messenger_laconic.xml",
                         "-g", geomfile,
@@ -530,11 +509,12 @@ class ConvertGenieEvJob(IJob):
 ###############################################################################
 
 class CompleteJob(IJob):
-    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False):
+    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, copyflux=False):
         super(CompleteJob, self).__init__(rundir, test)
         self._beam_input = beam_input
         self._geometry = geometry
         self._gen_config = gen_config
+        self._copyflux = copyflux
         
     def run(self):
         beam_input = self._beam_input
@@ -542,7 +522,7 @@ class CompleteJob(IJob):
         gen_config = self._gen_config
         #job_flux = MergeFluxJob(beam_input, test=self._test)
         rundir = self._rundir
-        job_flux = MakeFluxLinks(beam_input, test=self._test, rundir=rundir)
+        job_flux = MakeFluxLinks(beam_input, test=self._test, rundir=rundir, docopy=self._copyflux)
         job_creategeometry = CreateGeometryJob(geometry, test=self._test, rundir=rundir)
         maxfiles = None
         job_evrate = EventRateJob(beam_input, geometry, test=self._test, rundir=rundir, maxfiles=maxfiles)
@@ -578,7 +558,6 @@ def getjobname(opt):
 
 def run(opt):
     test = opt.test
-    card = opt.card
     ndid = opt.flux
     radius = opt.radius
     polarity = opt.polarity
@@ -604,16 +583,42 @@ def run(opt):
         raise Exception()
     #print "DEBUG speed up process for debugging"
     #filelist = filelist[0:10]
-    rundir = RunDir(card=card)
+    rundir = RunDir()
     beam_input = BeamInput(jobname, filelist)
     #geometry = Geometry(ndid=self._context.DetectorId.ND280, radius=2.0, z=4.0, orientation=Orientation.Z)
     if opt.geometry.lower() == "cylinder":
         geometry = CylinderGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
     else:
         geometry = CuboidGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
-    gen_config = GenEvConfig(num_events=nevents)
-    job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir)
+    gen_config = GenEvConfig(num_events=nevents, run_num=opt.runnum)
+    job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir, copyflux=opt.copyflux)
     job.run()
+    return
+
+###############################################################################
+
+def submitjobs(opt):
+    startrunnum = opt.runnum
+    jobs = []
+    for i in xrange(opt.njobs):
+        runnum = startrunnum + i
+        cmd = "python -m vectorgen.run_genie " + " ".join([
+            str(opt.polarity),
+            str(opt.radius),
+            str(opt.z),
+            str(opt.flux),
+            "--geometry={}".format(opt.flux),
+            "--nevents={}".format(opt.n),
+            "--runnum={}".format(runnum),
+            "--copyflux", #copy flux files to /tmp before running the job.
+        ])
+        queue = "long"
+        name = "genie_".join([str(opt.polarity), str(runnum)])
+        j = warwickcluster.ClusterJob(name, queue, cmd)
+        jobs.append(j)
+    #run the jobs
+    for j in jobs:
+        j.submit()
     return
 
 ###############################################################################
@@ -623,16 +628,24 @@ def parsecml():
     parser.add_argument("polarity", type=int, choices=[-1, 1], help="+1 to run neutrino, -1 to run anti-neutrino.", default=1)
     parser.add_argument("radius", type=float, help="Set radius of cyclinder in m.")
     parser.add_argument("z", type=float, help="Set z of cyclinder in m.")
-    parser.add_argument("flux", type=str, choices=nuosc.model.constants.DetectorId.ALL, help="choose flux plane.")
+    parser.add_argument("flux", type=str, choices=["nd2k"], help="choose flux plane.")
     parser.add_argument("--geometry", type=str, choices=["cylinder", "cuboid"], help="choose geoetry type", default="cuboid")
-    parser.add_argument("-c", "--card", type=str, default=None)
-    parser.add_argument("-n", "--nevents", dest="n", type=int, default=1000)
+    parser.add_argument("-n", "--nevents", dest="n", type=int, default=10000)
     parser.add_argument("-t", "--test", dest="test", type=bool, default=False)
+    parser.add_argument("-r", "--runnum", dest="runnum", type=int, default=1000)
+    parser.add_argument("-b", "--batch", dest="batch", action="store_true", default=False)
+    parser.add_argument("-j", "--njobs", dest="njobs", default=100)
+    parser.add_argument("--copyflux", dest="copyflux", action="store_true", default=False)
     return parser.parse_args()
+
+###############################################################################
 
 def main():
     opt = parsecml()
-    run(opt)
+    if opt.batch:
+        submitjobs(opt)
+    else:
+        run(opt)
     return
 
 ###############################################################################

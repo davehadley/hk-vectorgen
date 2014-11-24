@@ -7,11 +7,10 @@ import subprocess
 import os
 import glob
 import argparse
-import nuosc
 import itertools
 import collections
-import nuosc.model
-import nuosc.model.runtime as runtime
+
+import runtime
 
 #Jobs:
 #    (1) Merge flux files.
@@ -607,10 +606,10 @@ def parsecml():
     parser.add_argument("polarity", type=int, choices=[-1, 1], help="+1 to run neutrino, -1 to run anti-neutrino.", default=1)
     parser.add_argument("radius", type=float, help="Set radius of cyclinder in m.")
     parser.add_argument("z", type=float, help="Set z of cyclinder in m.")
-    parser.add_argument("flux", type=str, choices=nuosc.model.constants.DetectorId.ALL, help="choose flux plane.")
+    parser.add_argument("flux", type=str, help="choose flux plane.")
     parser.add_argument("--geometry", type=str, choices=["cylinder", "cuboid"], help="choose geoetry type", default="cuboid")
     parser.add_argument("-c", "--card", type=str, default=None)
-    parser.add_argument("-n", "--nevents", dest="n", type=int, default=1000)
+    parser.add_argument("-n", "--nevents", dest="n", type=int, default=10000)
     parser.add_argument("-p", "--pdg", dest="pdg", type=int, choices=[-14, -12, 12, 14], default=None)
     parser.add_argument("-t", "--test", dest="test", type=bool, default=False)
     return parser.parse_args()
