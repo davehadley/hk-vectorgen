@@ -567,8 +567,10 @@ def run(opt):
     #beamcontext = runtime.getcontext().beamcontext
     #nu_flux_files = glob.glob(_abspath("~/t2k/data/irods/QMULZone2/home/hyperk/fluxes/fluka_flux/numode/*.root"))
     #antinu_flux_files = glob.glob(_abspath("~/t2k/data/irods/QMULZone2/home/hyperk/fluxes/fluka_flux/anumode/*.root"))
-    nu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/numode/*.root"))
-    antinu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/antinumode/*.root"))
+    #nu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/numode/*.root"))
+    #antinu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/antinumode/*.root"))
+    nu_flux_files = glob.glob(_abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*.root"))
+    antinu_flux_files = glob.glob(_abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))
     fluxplanes = runtime.FluxPlaneDefinitions()
     fluxplanes.add(runtime.FluxPlane(name="nd2k", baseline=2.04, flukaid=1))
     beamcontext = runtime.BeamContext(jnubeamfiles=runtime.JnuBeamFiles(nu_flux_files, antinu_flux_files), fluxplanes=fluxplanes)
