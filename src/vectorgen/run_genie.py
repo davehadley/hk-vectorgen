@@ -502,7 +502,7 @@ class ConvertGenieEvJob(IJob):
     def _convert(self):
         infilename = _abspath(self._infilename)
         outfilename = _abspath(self.filename())
-        cmd = "gntpc -i {} -o {} -f t2k_rootracker".format(infilename, outfilename)
+        cmd = "gntpc -i %s -o %s -f t2k_rootracker" % (infilename, outfilename)
         self._check_call(cmd)
         return
 
@@ -609,9 +609,9 @@ def submitjobs(opt):
             str(opt.radius),
             str(opt.z),
             str(opt.flux),
-            "--geometry={}".format(opt.flux),
-            "--nevents={}".format(opt.n),
-            "--runnum={}".format(runnum),
+            "--geometry=%s" % (opt.geometry),
+            "--nevents=%s" % (opt.n),
+            "--runnum=%s" % (runnum),
             "--copyflux", #copy flux files to /tmp before running the job.
         ])
         queue = "long"
