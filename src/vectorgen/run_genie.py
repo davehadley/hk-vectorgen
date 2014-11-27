@@ -360,6 +360,8 @@ class EventRateJob(IJob):
     
     def _create_event_rate(self):
         outfilename = _abspath(self.filename())
+        tmpdir = tempfile.mkdtemp(suffix="run_genie")
+        tmpoutfilename = os.sep.join([tmpdir, self.filename()])
         beamfile = _abspath(self._beam_input.filename())
         filestem = self._beam_input.filestem()
         filestem = "".join((self._rundir.rundir(), os.sep, filestem))
@@ -386,9 +388,11 @@ class EventRateJob(IJob):
                         "--event-generator-list DefaultWithMEC",
                         "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)]),
                         "-t", volumename,
-                        "-S", outfilename,
+                        "-S", tmpoutfilename,
                         ))
         self._check_call(cmd)
+        #copy output to destination
+        shutil.copy2(tmpoutfilename, outfilename)
         return
     
     def verify(self):
