@@ -619,7 +619,7 @@ def submitjobs(opt):
             "--copyflux", #copy flux files to /tmp before running the job.
         ])
         queue = "long"
-        name = "genie_".join([str(opt.polarity), str(runnum)])
+        name = "genie" + "_".join([str(opt.polarity), str(runnum)])
         j = warwickcluster.ClusterJob(name, queue, cmd)
         jobs.append(j)
     #run the jobs
