@@ -1,3 +1,4 @@
+import uuid
 import ROOT
 import shutil
 import tempfile
@@ -360,6 +361,10 @@ class EventRateJob(IJob):
     
     def _create_event_rate(self):
         outfilename = _abspath(self.filename())
+        try:
+            os.makedirs(os.path.basename(outfilename))
+        except OSError:
+            pass
         tmpdir = tempfile.mkdtemp(suffix="run_genie")
         tmpoutfilename = os.sep.join([tmpdir, self.filename()])
         beamfile = _abspath(self._beam_input.filename())
@@ -393,6 +398,7 @@ class EventRateJob(IJob):
         self._check_call(cmd)
         #copy output to destination
         shutil.copy2(tmpoutfilename, outfilename)
+        atomicmove(tmpoutfilename, outfilename)
         return
     
     def verify(self):
@@ -447,6 +453,10 @@ class GenieEvJob(IJob):
 
     def _create_genev(self):
         outfilename = _abspath(self.filename())
+        try:
+            os.makedirs(os.path.basename(outfilename))
+        except OSError:
+            pass
         tmpdir = tempfile.mkdtemp("run_genie")
         tmpoutfilename = os.sep.join([tmpdir, os.path.basename(outfilename)])
         beamfile = _abspath(self._beam_input.filename())
@@ -483,9 +493,27 @@ class GenieEvJob(IJob):
                         ))
         self._check_call(cmd)
         #copy contents of temporary directory to the destination directory
-        cmd = "cp " + tmpdir + "/* " + os.path.dirname(outfilename)
-        self.check_call(cmd)
+        for root, dirs, files in os.walk(tmpdir):
+            for fname in files:
+                f = os.path.join(root, fname)
+                atomicmove(f, os.path.basename(outfilename))
         return
+
+def atomicmove(srcname, dest):
+    #determine destination dir and name
+    if os.path.exists(dest) and os.path.isdir(dest):
+        destdir = dest
+        destname = os.path.basename(srcname)
+    else:
+        destdir = os.path.dirname(dest)
+        destname = os.path.basename(dest)
+    destname = os.sep.join([destdir, destname])
+    #copy file to destination directory
+    uniquestr = str(uuid.uuid4()).replace("-", "")
+    shutil.move(srcname, destname + uniquestr)
+    #rename back to the proper name
+    os.rename(destname + uniquestr, destname)
+    return
 
 ###############################################################################
 
