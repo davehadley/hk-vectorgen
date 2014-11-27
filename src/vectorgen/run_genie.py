@@ -362,7 +362,7 @@ class EventRateJob(IJob):
     def _create_event_rate(self):
         outfilename = _abspath(self.filename())
         try:
-            os.makedirs(os.path.basename(outfilename))
+            os.makedirs(os.path.dirname(outfilename))
         except OSError:
             pass
         tmpdir = tempfile.mkdtemp(suffix="run_genie")
@@ -454,7 +454,7 @@ class GenieEvJob(IJob):
     def _create_genev(self):
         outfilename = _abspath(self.filename())
         try:
-            os.makedirs(os.path.basename(outfilename))
+            os.makedirs(os.path.dirname(outfilename))
         except OSError:
             pass
         tmpdir = tempfile.mkdtemp("run_genie")
