@@ -496,7 +496,7 @@ class GenieEvJob(IJob):
         for root, dirs, files in os.walk(tmpdir):
             for fname in files:
                 f = os.path.join(root, fname)
-                atomicmove(f, os.path.basename(outfilename))
+                atomicmove(f, os.path.dirname(outfilename))
         return
 
 def atomicmove(srcname, dest):
