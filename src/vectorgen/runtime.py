@@ -64,14 +64,15 @@ class JnuBeamFiles:
         self.antinu_flux_files = list(sorted(antinu_flux_files))
         
     def verify(self):
-        #all files should contain the tree "h2000"
-        for fname in itertools.chain(self.nu_flux_files, self.antinu_flux_files):
-            tfile = ROOT.TFile(fname, "READ")
-            if not tfile.IsOpen():
-                raise Exception("JnuBeamFiles failed to open file", fname)
-            treename = "h2000"
-            if not tfile.Get("h2000"):
-                raise Exception("JnuBeamFiles missing treename", treename, fname)
+        #Switch off to speed up processing. TODO: Find a faster method (eg check file size)
+        # #all files should contain the tree "h2000"
+        # for fname in itertools.chain(self.nu_flux_files, self.antinu_flux_files):
+        #     tfile = ROOT.TFile(fname, "READ")
+        #     if not tfile.IsOpen():
+        #         raise Exception("JnuBeamFiles failed to open file", fname)
+        #     treename = "h2000"
+        #     if not tfile.Get("h2000"):
+        #         raise Exception("JnuBeamFiles missing treename", treename, fname)
         return
 
 ###############################################################################
