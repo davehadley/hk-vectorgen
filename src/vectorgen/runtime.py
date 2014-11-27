@@ -60,8 +60,8 @@ class JnuBeamFiles:
     _default_antinu_flux_files = glob.glob("/home/dave/t2k/data/irods/QMULZone1/home/hyperk/gfluka_flux/flux_m320kA/hk_flux_gfluka_*.root")
     
     def __init__(self, nu_flux_files=_default_nu_flux_files, antinu_flux_files=_default_antinu_flux_files):
-        self.nu_flux_files = nu_flux_files
-        self.antinu_flux_files = antinu_flux_files
+        self.nu_flux_files = list(sorted(nu_flux_files))
+        self.antinu_flux_files = list(sorted(antinu_flux_files))
         
     def verify(self):
         #all files should contain the tree "h2000"
