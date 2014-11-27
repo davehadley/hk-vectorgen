@@ -447,6 +447,8 @@ class GenieEvJob(IJob):
 
     def _create_genev(self):
         outfilename = _abspath(self.filename())
+        tmpdir = tempfile.mkdtemp("run_genie")
+        tmpoutfilename = os.sep.join([tmpdir, os.path.basename(outfilename)])
         beamfile = _abspath(self._beam_input.filename())
         filestem = self._beam_input.filestem()
         filestem = "".join((self._rundir.rundir(), os.sep, filestem))
@@ -464,7 +466,7 @@ class GenieEvJob(IJob):
         numevents = self._gen_config.num_events
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
-        outfileprefix = outfilename.split(".0.ghep.root")[0]
+        outfileprefix = tmpoutfilename.split(".0.ghep.root")[0]
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         "-n", str(numevents),
@@ -480,6 +482,9 @@ class GenieEvJob(IJob):
                         "-o", outfileprefix
                         ))
         self._check_call(cmd)
+        #copy contents of temporary directory to the destination directory
+        cmd = "cp " + tmpdir + "/* " + os.path.dirname(outfilename)
+        self.check_call(cmd)
         return
 
 ###############################################################################
