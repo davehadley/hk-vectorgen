@@ -434,7 +434,7 @@ class GenieEvJob(IJob):
                                beamname,
                                geomname,
                                configname,
-                               )) + "." + ".0.ghep.root"
+                               )) + ".0.ghep.root"
         return outfilename
     
     def run(self):
