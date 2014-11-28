@@ -70,11 +70,6 @@ def str_from_polarity(polarity):
 
 ###############################################################################
 
-def getjobname(opt):
-    return str_from_polarity(opt.polarity)
-
-###############################################################################
-
 def run(opt):
     test = opt.test
     plane = BeamPlane(name="nd2k", code=opt.flux)
@@ -82,7 +77,6 @@ def run(opt):
     polarity = opt.polarity
     z = opt.z
     nevents = opt.n
-    jobname = getjobname(opt)
     #beamcontext = runtime.getcontext().beamcontext
     nu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*.root"))
     antinu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))
@@ -97,7 +91,7 @@ def run(opt):
     #print "DEBUG speed up process for debugging"
     #filelist = filelist[0:10]
     rundir = RunDir()
-    beam_input = BeamInput(jobname, filelist, plane)
+    beam_input = BeamInput(str_from_polarity(opt.polarity), filelist, plane)
     #geometry = Geometry(ndid=self._context.DetectorId.ND280, radius=2.0, z=4.0, orientation=Orientation.Z)
     if opt.geometry.lower() == "cylinder":
         geometry = CylinderGeometry(radius=radius, z=z, orientation=Orientation.Z)
