@@ -1,17 +1,19 @@
+import os
+import ROOT
+
+from vectorgen.constants import Orientation
+from vectorgen.jobtools import IJob
 
 ###############################################################################
 
 class CylinderGeometry:
     def __init__(self, ndid, radius=4.0, z=8.0, orientation=Orientation.Z, context=None):
-        if context is None:
-            context = runtime.getcontext()
         self._context = context
         self.ndid = ndid
         self.radius = radius
         self.z = z
         self.orientation = orientation
         self.name = self._uniquestr()
-        self._plane = plane_from_ndid(self.ndid, self._context)
 
     def verify(self):
         return
@@ -49,16 +51,12 @@ class CylinderGeometry:
 ###############################################################################
 
 class CuboidGeometry:
-    def __init__(self, ndid, radius=4.0, z=8.0, orientation=Orientation.Z, context=None):
-        if context is None:
-            context = runtime.getcontext()
-        self._context = context
+    def __init__(self, ndid, radius=4.0, z=8.0, orientation=Orientation.Z):
         self.ndid = ndid
         self.radius = radius
         self.z = z
         self.orientation = orientation
         self.name = self._uniquestr()
-        self._plane = plane_from_ndid(self.ndid, self._context)
 
     def verify(self):
         return
@@ -79,9 +77,6 @@ class CuboidGeometry:
 
     def volume_name(self):
         return "wc_volume"
-
-    def plane(self):
-        return self._plane
 
     def build_detector_volume(self):
         #get dimensions

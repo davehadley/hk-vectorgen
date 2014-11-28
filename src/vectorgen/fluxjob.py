@@ -5,12 +5,21 @@ import shutil
 
 from vectorgen.jobtools import IJob
 
+
+###############################################################################
+
+class BeamPlane:
+    def __init__(self, name, code):
+        self.name = name
+        self.code = code
+
 ###############################################################################
 
 class BeamInput:
-    def __init__(self, name, file_list):
+    def __init__(self, name, file_list, plane):
         self.name = name
         self._file_list = file_list
+        self._plane = plane
 
     def filelist(self):
         return sorted(list(itertools.chain.from_iterable(glob.glob(f) for f in self._file_list)))
@@ -28,6 +37,9 @@ class BeamInput:
 
     def filestem(self):
         return  "".join((self.linkdir(), os.path.sep, "nu.nd280"))
+
+    def planenum(self):
+        return self._plane.code
 
 ###############################################################################
 

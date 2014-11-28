@@ -49,8 +49,7 @@ class EventRateJob(IJob):
             N = min(N, self._maxfiles)
         geomfile = abspath(self._geometry.filename())
         volumename = self._geometry.volume_name()
-        plane = self._geometry.plane()
-        planenum = plane.ndcode
+        planenum = self._beam_input.planenum()
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
         cmd = " ".join((
@@ -158,8 +157,7 @@ class GenieEvJob(IJob):
         geomfile = abspath(self._geometry.filename())
         eventratefile = abspath(self._eventrate.filename())
         volumename = self._geometry.volume_name()
-        plane = self._geometry.plane()
-        planenum = plane.ndcode
+        planenum = self._beam_input.planenum()
         numevents = self._gen_config.num_events
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]

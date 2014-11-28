@@ -120,30 +120,6 @@ class RunDir:
 
 ###############################################################################
 
-class BeamInput:
-    def __init__(self, name, file_list):
-        self.name = name
-        self._file_list = file_list
-
-    def filelist(self):
-        return sorted(list(itertools.chain.from_iterable(glob.glob(f) for f in self._file_list)))
-    
-    def filename(self):
-        return "".join(["merged_beamfiles_", self.name, ".root"])
-    
-    def linkdir(self):
-        return "flux_links_" + self.filename().replace(".root", "")
-    
-    def verify(self):
-        if len(self.filelist()) < 1:
-            raise Exception("BeamInput has not matching files", self._file_pattern)
-        return
-    
-    def filestem(self):
-        return  "".join((self.linkdir(), os.path.sep, "nu.nd280"))
-
-###############################################################################
-
 class MergeFluxJob(IJob):
     def __init__(self, beam_input, rundir=None, test=False):
         super(MergeFluxJob, self).__init__(rundir, test)

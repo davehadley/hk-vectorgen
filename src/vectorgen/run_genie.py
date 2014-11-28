@@ -10,10 +10,9 @@ import glob
 import argparse
 import itertools
 import collections
-import runtime
 
 from vectorgen.jobtools import IJob, RunDir, abspath
-from vectorgen.fluxjob import BeamInput, MakeFluxLinks
+from vectorgen.fluxjob import BeamInput, MakeFluxLinks, BeamPlane
 from vectorgen.geometryjob import CylinderGeometry, CuboidGeometry, CreateGeometryJob
 from vectorgen.geniejob import EventRateJob, GenieEvJob, ConvertGenieEvJob, GenEvConfig
 from vectorgen.constants import Orientation
@@ -25,19 +24,6 @@ import warwickcluster
 #    (2) Create geometry.
 #    (3) Run event_rate.
 #    (4) Run genev.
-
-###############################################################################
-
-BeamPlane = collections.namedtuple("BeamPlane", ["name", "baseline", "ndcode"])
-
-###############################################################################
-
-def plane_from_ndid(ndid, context):
-    name = context.beamcontext.flux_planes().tostring(ndid)
-    baseline = context.beamcontext.flux_planes().baseline(ndid)
-    code = context.beamcontext.flux_planes().flukaid(ndid)
-    plane = BeamPlane(name=name, baseline=baseline, ndcode=code)
-    return plane
 
 ###############################################################################
 
@@ -91,7 +77,7 @@ def getjobname(opt):
 
 def run(opt):
     test = opt.test
-    ndid = opt.flux
+    plane = BeamPlane(name="nd2k", code=opt.flux)
     radius = opt.radius
     polarity = opt.polarity
     z = opt.z
@@ -102,27 +88,21 @@ def run(opt):
     antinu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))
     #nu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*1.root"))
     #antinu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*1.root"))
-    fluxplanes = runtime.FluxPlaneDefinitions()
-    fluxplanes.add(runtime.FluxPlane(name="nd2k", baseline=2.04, flukaid=1))
-    beamcontext = runtime.BeamContext(jnubeamfiles=runtime.JnuBeamFiles(nu_flux_files, antinu_flux_files), fluxplanes=fluxplanes)
-    context = runtime.Context(beamcontext=beamcontext)
-    jnubeamfiles = beamcontext.jnubeamfiles()
-    jnubeamfiles.verify()
     if polarity == 1:
-        filelist = jnubeamfiles.nu_flux_files
+        filelist = nu_flux_files
     elif polarity == -1:
-        filelist = jnubeamfiles.antinu_flux_files
+        filelist = antinu_flux_files
     else:
         raise Exception()
     #print "DEBUG speed up process for debugging"
     #filelist = filelist[0:10]
     rundir = RunDir()
-    beam_input = BeamInput(jobname, filelist)
+    beam_input = BeamInput(jobname, filelist, plane)
     #geometry = Geometry(ndid=self._context.DetectorId.ND280, radius=2.0, z=4.0, orientation=Orientation.Z)
     if opt.geometry.lower() == "cylinder":
-        geometry = CylinderGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
+        geometry = CylinderGeometry(radius=radius, z=z, orientation=Orientation.Z)
     else:
-        geometry = CuboidGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
+        geometry = CuboidGeometry(radius=radius, z=z, orientation=Orientation.Z)
     gen_config = GenEvConfig(num_events=nevents, run_num=opt.runnum, nu_pdg=opt.pdg)
     job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir, copyflux=opt.copyflux)
     job.run()
@@ -139,11 +119,11 @@ def submitjobs(opt):
             str(opt.polarity),
             str(opt.radius),
             str(opt.z),
-            str(opt.flux),
             "--geometry=%s" % (opt.geometry),
             "--nevents=%s" % (opt.n),
             "--runnum=%s" % (runnum),
             "--copyflux", #copy flux files to /tmp before running the job.
+            "--beamplane=%s" % opt.beamplane,
         ])
         if opt.pdg is not None:
             cmd += " --pdg=" + str(opt.pdg) + " "
@@ -163,7 +143,7 @@ def parsecml():
     parser.add_argument("polarity", type=int, choices=[-1, 1], help="+1 to run neutrino, -1 to run anti-neutrino.", default=1)
     parser.add_argument("radius", type=float, help="Set radius of cyclinder in m.")
     parser.add_argument("z", type=float, help="Set z of cyclinder in m.")
-    parser.add_argument("flux", type=str, choices=["nd2k"], help="choose flux plane.")
+    parser.add_argument("--beamplane", type=int, default=1, help="choose flux plane.")
     parser.add_argument("--geometry", type=str, choices=["cylinder", "cuboid"], help="choose geoetry type", default="cylinder")
     parser.add_argument("-p", "--pdg", dest="pdg", type=int, choices=[-14, -12, 12, 14], default=None)
     parser.add_argument("-n", "--nevents", dest="n", type=int, default=10000)
