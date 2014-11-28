@@ -670,7 +670,7 @@ def submitjobs(opt):
         ])
         if opt.pdg is not None:
             cmd += " --pdg=" + str(opt.pdg) + " "
-        queue = "long"
+        queue = "medium"
         name = "genie" + "_".join([str(opt.polarity), str(runnum)])
         j = warwickcluster.ClusterJob(name, queue, cmd)
         jobs.append(j)
