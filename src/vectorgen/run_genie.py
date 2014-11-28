@@ -494,8 +494,8 @@ class GenieEvJob(IJob):
         splinesfile = os.environ["GENIE_SPLINES"]
         outfileprefix = tmpoutfilename.split(".0.ghep.root")[0]
         fluxstr = "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)])
-        if self._gen_config.nu_pdg is not None:
-            fluxstr += "," + str(self._gen_config.nu_pdg)
+        if self._gen_config.nu_pdg_code is not None:
+            fluxstr += "," + str(self._gen_config.nu_pdg_code)
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         "-n", str(numevents),
