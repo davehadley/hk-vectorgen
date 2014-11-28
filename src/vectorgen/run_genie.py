@@ -108,7 +108,7 @@ class BeamInput:
     
     def verify(self):
         if len(self.filelist()) < 1:
-            raise Exception("BeamInput has not matching files", self._file_pattern)
+            raise Exception("BeamInput has not matching files", self._file_list)
         return
     
     def filestem(self):
@@ -407,10 +407,11 @@ class EventRateJob(IJob):
 ###############################################################################
 
 class GenEvConfig:
-    def __init__(self, num_events, run_num, startseed=1721827):
+    def __init__(self, num_events, run_num, nu_pdg=None, startseed=1721827):
         self.num_events = num_events
         self.run_num = run_num
         self._startingseed = startseed
+        self._nu_pdg = nu_pdg
 
     @property
     def seed(self):
@@ -418,8 +419,23 @@ class GenEvConfig:
     
     @property
     def name(self):
-        return "_".join((str(self._startingseed), str(self.run_num),
+        return "_".join((str(self.nu_pdg_name), str(self._startingseed), str(self.run_num),
         ))
+
+    @property
+    def nu_pdg_code(self):
+        return self._nu_pdg
+
+    @property
+    def nu_pdg_name(self):
+        _nu_pdg_names = {None : "allnuflav",
+                         0 : "allnuflav",
+                         12 : "nue",
+                         14 : "numu",
+                         -12 : "antinue",
+                         -14 : "antinumu",
+                              }
+        return _nu_pdg_names[self._nu_pdg]
     
 ###############################################################################
 
@@ -477,6 +493,9 @@ class GenieEvJob(IJob):
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
         outfileprefix = tmpoutfilename.split(".0.ghep.root")[0]
+        fluxstr = "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)])
+        if self._gen_config.nu_pdg is not None:
+            fluxstr += "," + str(self._gen_config.nu_pdg)
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         "-n", str(numevents),
@@ -486,7 +505,7 @@ class GenieEvJob(IJob):
                         "--message-thresholds ${GENIE}/config/Messenger_laconic.xml",
                         "-g", geomfile,
                         "--event-generator-list DefaultWithMEC",
-                        "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)]),
+                        fluxstr,
                         "-t", volumename,
                         "-P", eventratefile,
                         "-o", outfileprefix
@@ -602,12 +621,10 @@ def run(opt):
     nevents = opt.n
     jobname = getjobname(opt)
     #beamcontext = runtime.getcontext().beamcontext
-    #nu_flux_files = glob.glob(_abspath("~/t2k/data/irods/QMULZone2/home/hyperk/fluxes/fluka_flux/numode/*.root"))
-    #antinu_flux_files = glob.glob(_abspath("~/t2k/data/irods/QMULZone2/home/hyperk/fluxes/fluka_flux/anumode/*.root"))
-    #nu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/numode/*.root"))
-    #antinu_flux_files = glob.glob(_abspath("~/t2k/data/hk/ryan_flux/antinumode/*.root"))
     nu_flux_files = glob.glob(_abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*.root"))
     antinu_flux_files = glob.glob(_abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))
+    #nu_flux_files = glob.glob(_abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*1.root"))
+    #antinu_flux_files = glob.glob(_abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*1.root"))
     fluxplanes = runtime.FluxPlaneDefinitions()
     fluxplanes.add(runtime.FluxPlane(name="nd2k", baseline=2.04, flukaid=1))
     beamcontext = runtime.BeamContext(jnubeamfiles=runtime.JnuBeamFiles(nu_flux_files, antinu_flux_files), fluxplanes=fluxplanes)
@@ -629,7 +646,7 @@ def run(opt):
         geometry = CylinderGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
     else:
         geometry = CuboidGeometry(ndid=ndid, radius=radius, z=z, orientation=Orientation.Z, context=context)
-    gen_config = GenEvConfig(num_events=nevents, run_num=opt.runnum)
+    gen_config = GenEvConfig(num_events=nevents, run_num=opt.runnum, nu_pdg=opt.pdg)
     job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir, copyflux=opt.copyflux)
     job.run()
     return
@@ -651,6 +668,8 @@ def submitjobs(opt):
             "--runnum=%s" % (runnum),
             "--copyflux", #copy flux files to /tmp before running the job.
         ])
+        if opt.pdg is not None:
+            cmd += " --pdg=" + str(opt.pdg) + " "
         queue = "long"
         name = "genie" + "_".join([str(opt.polarity), str(runnum)])
         j = warwickcluster.ClusterJob(name, queue, cmd)
@@ -669,6 +688,7 @@ def parsecml():
     parser.add_argument("z", type=float, help="Set z of cyclinder in m.")
     parser.add_argument("flux", type=str, choices=["nd2k"], help="choose flux plane.")
     parser.add_argument("--geometry", type=str, choices=["cylinder", "cuboid"], help="choose geoetry type", default="cylinder")
+    parser.add_argument("-p", "--pdg", dest="pdg", type=int, choices=[-14, -12, 12, 14], default=None)
     parser.add_argument("-n", "--nevents", dest="n", type=int, default=10000)
     parser.add_argument("-t", "--test", dest="test", type=bool, default=False)
     parser.add_argument("-r", "--runnum", dest="runnum", type=int, default=1000)
