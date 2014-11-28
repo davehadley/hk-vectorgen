@@ -12,7 +12,7 @@ import itertools
 import collections
 import runtime
 
-from simplot.batch import warwickcluster
+import warwickcluster
 
 #Jobs:
 #    (1) Merge flux files.
