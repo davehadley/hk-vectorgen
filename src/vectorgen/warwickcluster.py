@@ -68,7 +68,7 @@ class ClusterJob:
         cmd = "bsub < "+self.scriptPath
         if self.isTest or not self.isQuiet:
             print str(self),"executing:",cmd
-        if self._isLoginNode():
+        if self.isLoginNode():
             os.system(cmd)
         elif not self.isTest:
             raise ClusterJobException("host not recognised as cluster login node",socket.getfqdn())
