@@ -6,7 +6,9 @@ import glob
 import ROOT
 
 from vectorgen import genev_to_nuance_wcsim
-from vectorgen.jobtools import IJob
+from vectorgen.jobtools import IJob, abspath
+
+###############################################################################
 
 _MACRO_TEMPLATE = '''
 /run/verbose 0
@@ -24,14 +26,27 @@ _MACRO_TEMPLATE = '''
 /run/beamOn {numberofevents}
 '''
 
+###############################################################################
+
 class WCSimJob(IJob):
-    def __init__(self, inputfilename, outputfilename=None):
-        self._originalinputfilename = inputfilename
-        self._inputfilename = inputfilename
-        if outputfilename is None:
-            self._autooutputfilename(inputfilename)
-        self._outputfilename = outputfilename
+    def __init__(self, inputfilename, outputfilename=None, nevents=None):
+        self._maxevents = nevents
+        #create a temp directory to work in
         self._tmpdir = tempfile.mkdtemp(prefix="tmp_vectorgen_run_wcsim")
+        super(WCSimJob, self).__init__(rundir=self._tmpdir)
+        #work with absolute path names
+        inputfilename = abspath(inputfilename)
+        if outputfilename:
+            outputfilename = abspath(outputfilename)
+        #store in and out file names
+        self._originalinputfilename = str(inputfilename)
+        self._inputfilename = str(inputfilename)
+        if outputfilename is None:
+            outputfilename = self._autooutputfilename(inputfilename)
+        self._finaloutputfilename = outputfilename
+        self._outputfilename = os.path.sep.join([self._tmpdir, os.path.basename(outputfilename)])
+
+
 
     def _autooutputfilename(self, fname):
         dn = os.path.dirname(fname)
@@ -40,15 +55,27 @@ class WCSimJob(IJob):
         if bn == fn:
             raise Exception("unable to automatically determine output file name from input file name", fname)
         result = os.sep.join([dn, fn])
-        return result
+        return abspath(result)
 
     def run(self):
         self._copyinputtotemp()
         datfile = self._create_datfile()
         macfile = self._create_macro(datfile)
         self._runwcsim(macfile)
+        self._copy_original_genev_tree()
         self._copy_result_to_dest()
         return
+
+    def _get_genev_tree(self, tfile):
+        tree = None
+        for tname in ["nRooTracker", "gRooTracker"]:
+            tree = tfile.Get(tname)
+            if tree:
+                break
+        if not tree:
+            tfile.ls()
+            raise Exception("failed to load tree", self._inputfilename)
+        return tree
 
     def _copyinputtotemp(self):
         src = self._originalinputfilename
@@ -59,9 +86,12 @@ class WCSimJob(IJob):
         return
 
     def _create_datfile(self):
+        genev_to_nuance_wcsim.loadlib()
         infile = self._inputfilename
         #get output filename
-        fname = os.path.basename(infile).replace(".dat", ".root")
+        fname = os.path.basename(infile).replace(".root", ".dat")
+        if fname == infile:
+            raise Exception("Error: failed to determine correct filename for dat file.", fname)
         outfile = os.sep.join([self._tmpdir, fname])
         #run conversion
         genev_to_nuance_wcsim.chktrack2(infile, outfile)
@@ -71,7 +101,6 @@ class WCSimJob(IJob):
         #get macro contents
         inputfilename = datfile
         outputfilename = self._outputfilename
-        outputfilename = os.path[self._tmpdir, os.path.dirname(os.path.basename(outputfilename))]
         nevents = self._nevents()
         macstr = _MACRO_TEMPLATE.format(inputfilename=inputfilename, outputfilename=outputfilename, numberofevents=nevents)
         #write macro to a file
@@ -80,29 +109,27 @@ class WCSimJob(IJob):
         return macfname
 
     def _nevents(self):
-        tfile = ROOT.TFile(self._inputfilename)
-        if not tfile.IsOpen():
-            raise Exception("failed to open ROOT file", self._inputfilename)
-        tree = None
-        for tname in ["nRooTracker", "gRooTracker"]:
-            tree = tfile.Get(tname)
-            if tree:
-                break
-        if not tree:
-            tfile.ls()
-            raise Exception("failed to load tree", self._inputfilename)
-        return tree.GetEntries()
+        if self._maxevents is not None:
+            return self._maxevents
+        else:
+            #determine number of events from the input file
+            tfile = ROOT.TFile(self._inputfilename)
+            if not tfile.IsOpen():
+                raise Exception("failed to open ROOT file", self._inputfilename)
+            tree = self._get_genev_tree(tfile)
+            return tree.GetEntries()
 
-    def _runwcsim(self):
+    def _runwcsim(self, macfile):
         wcsimbin = self._findwcsimbinary()
-        self._check_call(wcsimbin, workingdir=self._tmpdir)
+        cmd = " ".join([wcsimbin, macfile])
+        self._check_call(cmd, workingdir=self._tmpdir)
         return
 
 
     def _findwcsimbinary(self):
         wcsimbin = None
         try:
-            wcsimdir = os.environ("WCSIMDIR", None)
+            wcsimdir = os.environ["WCSIMDIR"]
         except KeyError:
             raise Exception("No WCSIMDIR environment variable set.")
         pattern = os.sep.join([wcsimdir,"exe", "bin", "*", "WCSim"])
@@ -114,18 +141,35 @@ class WCSimJob(IJob):
         return wcsimbin
 
     def _copy_result_to_dest(self):
-
+        src = self._outputfilename
+        dst = self._finaloutputfilename
+        shutil.move(src, dst)
         return
+
+    def _copy_original_genev_tree(self):
+        oldfile = ROOT.TFile(self._inputfilename)
+        if not oldfile.IsOpen():
+            raise Exception("failed to open ROOT file", self._inputfilename)
+        oldtree = self._get_genev_tree(oldfile)
+        newfile = ROOT.TFile(self._outputfilename, "UPDATE")
+        newtree = oldtree.CloneTree()
+        newtree.Write()
+        newfile.Close()
+        oldfile.Close()
+        return
+
+###############################################################################
 
 def parsecml():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", help="Input files.")
     parser.add_argument("-o", help="Output filename", default=None)
+    parser.add_argument("--maxevents",  help="Set a maximum number of events to process", type=int, default=None)
     parser.add_argument("--batch" , action="store_true", help="Submit job to batch system.")
     return parser.parse_args()
 
 def run(opt):
-    j = WCSimJob(opt.input, opt.o)
+    j = WCSimJob(opt.input, opt.o, nevents=opt.maxevents)
     j.run()
     return
 

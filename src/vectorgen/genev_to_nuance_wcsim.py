@@ -100,9 +100,13 @@ def chktrack2(inputfile, outputfile, wcsim=True):
 
 ###############################################################################
 
+_has_loaded_lib = False
+
 def loadlib():
     srcfile = pkg_resources.resource_filename("vectorgen", "readRooTracker.C+")
     ROOT.gROOT.ProcessLine(".L " + srcfile)
+    global _has_loaded_lib
+    _has_loaded_lib  = True
     return
 
 ###############################################################################
