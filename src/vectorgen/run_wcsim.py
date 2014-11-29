@@ -7,6 +7,7 @@ import ROOT
 
 from vectorgen import genev_to_nuance_wcsim
 from vectorgen.jobtools import IJob, abspath
+from vectorgen.warwickcluster import ClusterJob
 
 ###############################################################################
 
@@ -58,12 +59,15 @@ class WCSimJob(IJob):
         return abspath(result)
 
     def run(self):
-        self._copyinputtotemp()
-        datfile = self._create_datfile()
-        macfile = self._create_macro(datfile)
-        self._runwcsim(macfile)
-        self._copy_original_genev_tree()
-        self._copy_result_to_dest()
+        if os.path.exists(self._finaloutputfilename):
+            print "WARNING: WCSimJob output file already exists", self._finaloutputfilename
+        else:
+            self._copyinputtotemp()
+            datfile = self._create_datfile()
+            macfile = self._create_macro(datfile)
+            self._runwcsim(macfile)
+            self._copy_original_genev_tree()
+            self._copy_result_to_dest()
         return
 
     def _get_genev_tree(self, tfile):
@@ -162,19 +166,54 @@ class WCSimJob(IJob):
 
 def parsecml():
     parser = argparse.ArgumentParser()
-    parser.add_argument("input", help="Input files.")
+    parser.add_argument("input", help="Input files.", nargs="+")
     parser.add_argument("-o", help="Output filename", default=None)
     parser.add_argument("--maxevents",  help="Set a maximum number of events to process", type=int, default=None)
     parser.add_argument("--batch" , action="store_true", help="Submit job to batch system.")
     return parser.parse_args()
 
+###############################################################################
+
+def iterinputfiles(opt):
+    for pattern in opt.input:
+        for fname in glob.glob(pattern):
+            yield fname
+
+###############################################################################
+
 def run(opt):
-    j = WCSimJob(opt.input, opt.o, nevents=opt.maxevents)
-    j.run()
+    #create 1 job per input file
+    jobs = []
+    for fname in iterinputfiles(opt):
+        j = WCSimJob(fname, opt.o, nevents=opt.maxevents)
+        jobs.append(j)
+    #run all jobs
+    for j in jobs:
+        j.verify()
+    for j in jobs:
+        j.run()
     return
 
+###############################################################################
+
 def submitjobs(opt):
-    pass
+    #setup 1 job per input file
+    jobs = []
+    for fname in iterinputfiles(opt):
+        cmd = "python -m vectorgen.run_wcsim "
+        if opt.o:
+            cmd += " -o \"" + str(opt.o) + "\""
+        if opt.maxevents:
+            cmd += " --maxevent=" + str(opt.maxevents)
+        cmd += "\"" + str(fname) + "\""
+        j = ClusterJob(fname, queue="medium", cmd=cmd)
+        jobs.append(j)
+    #submit jobs
+    for j in jobs:
+        j.submit()
+    return
+
+###############################################################################
 
 def main():
     opt = parsecml()
@@ -183,6 +222,8 @@ def main():
     else:
         run(opt)
     return
+
+###############################################################################
 
 if __name__ == "__main__":
     main()
