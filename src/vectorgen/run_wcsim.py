@@ -206,8 +206,8 @@ def submitjobs(opt):
         if opt.maxevents:
             cmd += " --maxevent=" + str(opt.maxevents)
         cmd += " \"" + str(fname) + "\""
-        jobname = "job_" + os.path.basename(fname).replace(".root", "")
-        j = ClusterJob(jobname, queue="medium", cmd=cmd)
+        jobname = "job_run_wcsim_" + os.path.basename(fname).replace(".root", "")
+        j = ClusterJob(jobname, queue="long", cmd=cmd)
         jobs.append(j)
     #submit jobs
     for j in jobs:
