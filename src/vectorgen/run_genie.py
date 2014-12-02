@@ -72,7 +72,7 @@ def str_from_polarity(polarity):
 
 def run(opt):
     test = opt.test
-    plane = BeamPlane(name="nd2k", code=opt.flux)
+    plane = BeamPlane(name="nd2k", code=opt.beamplane)
     radius = opt.radius
     polarity = opt.polarity
     z = opt.z
