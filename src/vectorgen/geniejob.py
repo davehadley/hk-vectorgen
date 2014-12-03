@@ -18,9 +18,11 @@ class EventRateJob(IJob):
     def filename(self):
         beamname = self._beam_input.name
         geomname = self._geometry.name
+        pdgname = self._gen_config.nu_pdg_name
         outfilename = "_".join(("eventrate",
                                beamname,
                                geomname,
+                               pdgname,
                                )) + ".root"
         return outfilename
 
@@ -52,6 +54,9 @@ class EventRateJob(IJob):
         planenum = self._beam_input.planenum()
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
+        fluxstr = "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)])
+        if self._gen_config.nu_pdg_code is not None:
+            fluxstr += "," + str(self._gen_config.nu_pdg_code)
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         #"-n", numevents,
@@ -61,7 +66,7 @@ class EventRateJob(IJob):
                         "--message-thresholds ${GENIE}/config/Messenger_laconic.xml",
                         "-g", geomfile,
                         "--event-generator-list DefaultWithMEC",
-                        "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)]),
+                        fluxstr,
                         "-t", volumename,
                         "-S", tmpoutfilename,
                         ))
