@@ -61,3 +61,14 @@ class RunDir:
 
     def rundir(self):
         return self._rundir
+
+###############################################################################
+
+def mirror_file(fname):
+    src = fname
+    dst = os.path.sep.join(["tmp", "hk_vectorgen_mirror", fname])
+    os.makedirs(os.path.basename(dst))
+    subprocess.check_call("rsync",  "-zxr", "--progress", "--include=\"*\" ", src, dst)
+    return dst
+
+###############################################################################
