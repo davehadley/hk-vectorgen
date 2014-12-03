@@ -66,9 +66,18 @@ class RunDir:
 
 def mirror_file(fname):
     src = fname
-    dst = os.path.sep.join(["tmp", "hk_vectorgen_mirror", fname])
-    os.makedirs(os.path.basename(dst))
-    subprocess.check_call("rsync",  "-zxr", "--progress", "--include=\"*\" ", src, dst)
+    dst = os.path.sep.join(["/tmp", "hk_vectorgen_mirror", fname])
+    #check size and modification time
+    docopy = True
+    if os.path.exists(dst):
+        if os.path.getsize(src) == os.path.getsize(dst) and os.path.getmtime(src) <= os.path.getmtime(dst):
+            #size and modification times match
+            docopy = False
+    if docopy:
+        dirname = os.path.dirname(dst)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+        subprocess.check_call(["rsync",  "-zxr", "--progress", "--include=\"*\" ", src, dst])
     return dst
 
 ###############################################################################
