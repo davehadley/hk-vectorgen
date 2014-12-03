@@ -9,11 +9,12 @@ from vectorgen.jobtools import IJob, abspath
 ###############################################################################
 
 class EventRateJob(IJob):
-    def __init__(self, beam_input, geometry, rundir=None, test=False, maxfiles=None):
+    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, maxfiles=None):
         super(EventRateJob, self).__init__(rundir, test)
         self._beam_input = beam_input
         self._geometry = geometry
         self._maxfiles = maxfiles
+        self._gen_config = gen_config
 
     def filename(self):
         beamname = self._beam_input.name

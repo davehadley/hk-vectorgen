@@ -44,7 +44,7 @@ class CompleteJob(IJob):
         job_flux = MakeFluxLinks(beam_input, test=self._test, rundir=rundir, docopy=self._copyflux)
         job_creategeometry = CreateGeometryJob(geometry, test=self._test, rundir=rundir)
         maxfiles = None
-        job_evrate = EventRateJob(beam_input, geometry, test=self._test, rundir=rundir, maxfiles=maxfiles)
+        job_evrate = EventRateJob(beam_input, geometry, gen_config, test=self._test, rundir=rundir, maxfiles=maxfiles)
         job_genev = GenieEvJob(gen_config, beam_input, geometry, job_evrate, test=self._test, rundir=rundir, maxfiles=maxfiles)
         job_convert = ConvertGenieEvJob(job_genev, test=self._test, rundir=rundir)
         jobs = [job_flux,
