@@ -4,6 +4,7 @@ import os
 import shutil
 
 from vectorgen.jobtools import IJob, mirror_file
+from vectorgen.filelock import FileLock
 
 
 ###############################################################################
@@ -85,6 +86,8 @@ class MakeFluxLinks(IJob):
 
     def _run_make_links(self):
         outdir = "".join((self._rundir.rundir(), os.sep, self._beam_input.linkdir()))
+        filelock = FileLock("/tmp/.lock_file_hk_vectorgen_flux", timeout=60*10)
+        filelock.lock()
         try:
             os.makedirs(outdir)
         except os.error:
@@ -99,6 +102,7 @@ class MakeFluxLinks(IJob):
             dst = "".join((self._rundir.rundir(), os.sep, self._beam_input.filestem(), ".", str(i), ".root"))
             if not os.path.exists(dst):
                 os.symlink(src, dst)
+        filelock.release()
         return
 
     def _mirror(self, fname):
