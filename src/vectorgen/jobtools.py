@@ -86,8 +86,8 @@ def mirror_file(fname):
 def mirror_file_with_lock(fname, lockfile="/tmp/.lockfile_hk_vectorgen_mirror"):
     lock = FileLock(lockfile, timeout=60*10)
     lock.lock()
-    mirror_file(fname)
+    result = mirror_file(fname)
     lock.release()
-    return
+    return result
 
 ###############################################################################
