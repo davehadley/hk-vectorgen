@@ -44,7 +44,7 @@ class CompleteJob(IJob):
         job_flux = MakeFluxLinks(beam_input, test=self._test, rundir=rundir, docopy=self._copyflux)
         job_creategeometry = CreateGeometryJob(geometry, test=self._test, rundir=rundir)
         maxfiles = None
-        job_evrate = EventRateJob(beam_input, geometry, test=self._test, rundir=rundir, maxfiles=maxfiles)
+        job_evrate = EventRateJob(beam_input, geometry, gen_config, test=self._test, rundir=rundir, maxfiles=maxfiles)
         job_genev = GenieEvJob(gen_config, beam_input, geometry, job_evrate, test=self._test, rundir=rundir, maxfiles=maxfiles)
         job_convert = ConvertGenieEvJob(job_genev, test=self._test, rundir=rundir)
         jobs = [job_flux,
@@ -72,7 +72,7 @@ def str_from_polarity(polarity):
 
 def run(opt):
     test = opt.test
-    plane = BeamPlane(name="nd2k", code=opt.flux)
+    plane = BeamPlane(name="nd2k", code=opt.beamplane)
     radius = opt.radius
     polarity = opt.polarity
     z = opt.z
@@ -121,8 +121,8 @@ def submitjobs(opt):
         ])
         if opt.pdg is not None:
             cmd += " --pdg=" + str(opt.pdg) + " "
-        queue = "medium"
-        name = "genie" + "_".join([str(opt.polarity), str(runnum)])
+        queue = "long"
+        name = "job_run_genie_" + "_".join([str(opt.polarity), str(opt.pdg), str(runnum)])
         j = warwickcluster.ClusterJob(name, queue, cmd)
         jobs.append(j)
     #run the jobs

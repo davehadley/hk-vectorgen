@@ -9,18 +9,21 @@ from vectorgen.jobtools import IJob, abspath
 ###############################################################################
 
 class EventRateJob(IJob):
-    def __init__(self, beam_input, geometry, rundir=None, test=False, maxfiles=None):
+    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, maxfiles=None):
         super(EventRateJob, self).__init__(rundir, test)
         self._beam_input = beam_input
         self._geometry = geometry
         self._maxfiles = maxfiles
+        self._gen_config = gen_config
 
     def filename(self):
         beamname = self._beam_input.name
         geomname = self._geometry.name
+        pdgname = self._gen_config.nu_pdg_name
         outfilename = "_".join(("eventrate",
                                beamname,
                                geomname,
+                               pdgname,
                                )) + ".root"
         return outfilename
 
@@ -52,6 +55,9 @@ class EventRateJob(IJob):
         planenum = self._beam_input.planenum()
         geniepath = os.environ["GENIE"]
         splinesfile = os.environ["GENIE_SPLINES"]
+        fluxstr = "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)])
+        if self._gen_config.nu_pdg_code is not None:
+            fluxstr += "," + str(self._gen_config.nu_pdg_code)
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         #"-n", numevents,
@@ -59,9 +65,10 @@ class EventRateJob(IJob):
                         "--seed", str(1721827),
                         "--cross-sections", splinesfile,
                         "--message-thresholds ${GENIE}/config/Messenger_laconic.xml",
+                        #"--message-thresholds ${GENIE}/config/Messenger_rambling.xml",
                         "-g", geomfile,
                         "--event-generator-list DefaultWithMEC",
-                        "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)]),
+                        fluxstr,
                         "-t", volumename,
                         "-S", tmpoutfilename,
                         ))
@@ -172,6 +179,7 @@ class GenieEvJob(IJob):
                         "--seed", str(self._gen_config.seed),
                         "--cross-sections", splinesfile,
                         "--message-thresholds ${GENIE}/config/Messenger_laconic.xml",
+                        #"--message-thresholds ${GENIE}/config/Messenger_rambling.xml",
                         "-g", geomfile,
                         "--event-generator-list DefaultWithMEC",
                         fluxstr,

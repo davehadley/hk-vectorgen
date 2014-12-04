@@ -7,9 +7,7 @@ from vectorgen.jobtools import IJob
 ###############################################################################
 
 class CylinderGeometry:
-    def __init__(self, ndid, radius=4.0, z=8.0, orientation=Orientation.Z, context=None):
-        self._context = context
-        self.ndid = ndid
+    def __init__(self, radius=4.0, z=8.0, orientation=Orientation.Z):
         self.radius = radius
         self.z = z
         self.orientation = orientation
@@ -19,7 +17,7 @@ class CylinderGeometry:
         return
 
     def _uniquestr(self):
-        return "_".join((self._context.beamcontext.flux_planes().tostring(self.ndid),
+        return "_".join((
                          "cylinder",
                          self._float_to_string(self.radius, "r"),
                          self._float_to_string(self.z, "z"),
@@ -35,9 +33,6 @@ class CylinderGeometry:
     def volume_name(self):
         return "wc_volume"
 
-    def plane(self):
-        return self._plane
-
     def build_detector_volume(self):
         #get dimensions
         m_to_mm = 1000.0
@@ -51,8 +46,7 @@ class CylinderGeometry:
 ###############################################################################
 
 class CuboidGeometry:
-    def __init__(self, ndid, radius=4.0, z=8.0, orientation=Orientation.Z):
-        self.ndid = ndid
+    def __init__(self, radius=4.0, z=8.0, orientation=Orientation.Z):
         self.radius = radius
         self.z = z
         self.orientation = orientation
@@ -62,7 +56,7 @@ class CuboidGeometry:
         return
 
     def _uniquestr(self):
-        return "_".join((self._context.beamcontext.flux_planes().tostring(self.ndid),
+        return "_".join((
                          "cuboid",
                          self._float_to_string(self.radius, "x"),
                          self._float_to_string(self.z, "z"),
