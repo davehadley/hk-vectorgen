@@ -74,7 +74,6 @@ class EventRateJob(IJob):
                         ))
         self._check_call(cmd)
         #copy output to destination
-        shutil.copy2(tmpoutfilename, outfilename)
         atomicmove(tmpoutfilename, outfilename)
         return
 
