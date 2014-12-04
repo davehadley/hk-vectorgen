@@ -2,6 +2,7 @@ import glob
 import subprocess
 import tempfile
 import os
+from filelock import FileLock
 
 ###############################################################################
 import itertools
@@ -79,5 +80,14 @@ def mirror_file(fname):
             os.makedirs(dirname)
         subprocess.check_call(["rsync",  "-zxr", "--progress", "--include=\"*\" ", src, dst])
     return dst
+
+###############################################################################
+
+def mirror_file_with_lock(fname, lockfile="/tmp/.lockfile_hk_vectorgen_mirror"):
+    lock = FileLock(lockfile, timeout=60*10)
+    lock.lock()
+    mirror_file(fname)
+    lock.release()
+    return
 
 ###############################################################################

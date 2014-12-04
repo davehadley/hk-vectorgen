@@ -4,7 +4,7 @@ import shutil
 import tempfile
 import uuid
 
-from vectorgen.jobtools import IJob, abspath
+from vectorgen.jobtools import IJob, abspath, mirror_file_with_lock
 
 ###############################################################################
 
@@ -161,7 +161,6 @@ class GenieEvJob(IJob):
         if self._maxfiles is not None:
             N = min(N, self._maxfiles)
         geomfile = abspath(self._geometry.filename())
-        eventratefile = abspath(self._eventrate.filename())
         volumename = self._geometry.volume_name()
         planenum = self._beam_input.planenum()
         numevents = self._gen_config.num_events
@@ -171,6 +170,10 @@ class GenieEvJob(IJob):
         fluxstr = "-f " + "".join([filestem,"@", str(0), "@", str(N), ",nd" + str(planenum)])
         if self._gen_config.nu_pdg_code is not None:
             fluxstr += "," + str(self._gen_config.nu_pdg_code)
+        #get event rate file and copy to temp
+        eventratefile = abspath(self._eventrate.filename())
+        eventratefile = mirror_file_with_lock(eventratefile)
+        #form genev command
         cmd = " ".join((
                         os.sep.join((geniepath, "bin", "gevgen_t2k")),
                         "-n", str(numevents),
