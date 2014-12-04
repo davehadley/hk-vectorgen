@@ -8,6 +8,42 @@ from vectorgen.jobtools import IJob, abspath
 
 ###############################################################################
 
+class NeutMakeLinks(IJob):
+    def __init__(self, rundir, card=None, test=False):
+        super(NeutMakeLinks, self).__init__(rundir, test)
+        self._card = self._find_card(card)
+        self._run_make_links()
+
+    def _find_card(self, card):
+        if card is None:
+            #use default from NEUTGEOM directory
+            card = "".join((os.environ["NEUT_ROOT"], os.sep, "src/neutgeom/neut.card"))
+        card = abspath(card)
+        if not os.path.exists(card):
+            raise Exception("Cannot find card file", card)
+        return card
+
+    def _run_make_links(self):
+        outdir = self._rundir.rundir()
+        try:
+            os.makedirs(outdir)
+        except os.error:
+            #ignore as this happens if directory already exists
+            pass
+        inputdir = "".join((os.environ["NEUT_ROOT"], os.sep, "src", os.sep, "neutsmpl"))
+        for fname in os.listdir(inputdir):
+            src = "".join((inputdir, os.sep, fname))
+            if os.path.islink(src):
+                dst = "".join((outdir, os.sep, fname))
+                if not os.path.exists(dst):
+                    os.symlink(src, dst)
+        src = self._card
+        dst = "".join((outdir, os.sep, "neut.card"))
+        shutil.copyfile(src, dst)
+        return
+
+###############################################################################
+
 class EventRateJob(IJob):
     def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, maxfiles=None):
         super(EventRateJob, self).__init__(rundir, test)
@@ -104,9 +140,9 @@ class GenEvConfig:
 
 ###############################################################################
 
-class GenieEvJob(IJob):
+class NeutEvJob(IJob):
     def __init__(self, gen_config, beam_input, geometry, eventratejob, rundir=None, test=False, maxfiles=None):
-        super(GenieEvJob, self).__init__(rundir, test)
+        super(NeutEvJob, self).__init__(rundir, test)
         self._gen_config = gen_config
         self._beam_input = beam_input
         self._geometry = geometry

@@ -14,7 +14,7 @@ import collections
 from vectorgen.jobtools import IJob, RunDir, abspath
 from vectorgen.fluxjob import BeamInput, MakeFluxLinks, BeamPlane
 from vectorgen.geometryjob import CylinderGeometry, CuboidGeometry, CreateGeometryJob
-from vectorgen.neutjob import EventRateJob, NeutEvJob, GenEvConfig
+from vectorgen.neutjob import EventRateJob, NeutEvJob, GenEvConfig, NeutMakeLinks
 from vectorgen.constants import Orientation
 
 import warwickcluster
@@ -28,12 +28,13 @@ import warwickcluster
 ###############################################################################
 
 class CompleteJob(IJob):
-    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, copyflux=False):
+    def __init__(self, beam_input, geometry, gen_config, rundir=None, test=False, copyflux=False, card=None):
         super(CompleteJob, self).__init__(rundir, test)
         self._beam_input = beam_input
         self._geometry = geometry
         self._gen_config = gen_config
         self._copyflux = copyflux
+        self._card = card
 
     def run(self):
         beam_input = self._beam_input
@@ -41,12 +42,14 @@ class CompleteJob(IJob):
         gen_config = self._gen_config
         #job_flux = MergeFluxJob(beam_input, test=self._test)
         rundir = self._rundir
+        job_neutlinks = NeutMakeLinks(rundir, card=self._card)
         job_flux = MakeFluxLinks(beam_input, test=self._test, rundir=rundir, docopy=self._copyflux)
         job_creategeometry = CreateGeometryJob(geometry, test=self._test, rundir=rundir)
         maxfiles = None
-        job_evrate = EventRateJob(beam_input, geometry, test=self._test, rundir=rundir, maxfiles=maxfiles)
+        job_evrate = EventRateJob(beam_input, geometry, gen_config, test=self._test, rundir=rundir, maxfiles=maxfiles)
         job_genev = NeutEvJob(gen_config, beam_input, geometry, job_evrate, test=self._test, rundir=rundir, maxfiles=maxfiles)
-        jobs = [job_flux,
+        jobs = [job_neutlinks,
+                job_flux,
                 job_creategeometry,
                 job_evrate,
                 job_genev,
@@ -76,10 +79,10 @@ def run(opt):
     z = opt.z
     nevents = opt.n
     #beamcontext = runtime.getcontext().beamcontext
-    nu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*.root"))
-    antinu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))
-    #nu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*1.root"))
-    #antinu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*1.root"))
+    #nu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*.root"))[0:10]
+    #antinu_flux_files = glob.glob(abspath("/data/t2k/hk/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*.root"))[0:10]
+    nu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_m320a_2km_fluka2011_*1.root"))[0:10]
+    antinu_flux_files = glob.glob(abspath("~/t2k/data/irods/hk2/home/hyperk/fluxes/flux_2km/plus_minus320kA/t2hk_320a_2km_fluka2011_*1.root"))[0:10]
     if polarity == 1:
         filelist = nu_flux_files
     elif polarity == -1:
@@ -96,7 +99,7 @@ def run(opt):
     else:
         geometry = CuboidGeometry(radius=radius, z=z, orientation=Orientation.Z)
     gen_config = GenEvConfig(num_events=nevents, run_num=opt.runnum, nu_pdg=opt.pdg)
-    job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir, copyflux=opt.copyflux)
+    job = CompleteJob(beam_input, geometry, gen_config, test=test, rundir=rundir, copyflux=opt.copyflux, card=opt.card)
     job.run()
     return
 
@@ -144,6 +147,7 @@ def parsecml():
     parser.add_argument("-b", "--batch", dest="batch", action="store_true", default=False)
     parser.add_argument("-j", "--njobs", dest="njobs", type=int, default=100)
     parser.add_argument("--copyflux", dest="copyflux", action="store_true", default=False)
+    parser.add_argument("-c", "--card", type=str, default=None)
     return parser.parse_args()
 
 ###############################################################################
