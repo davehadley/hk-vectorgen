@@ -55,11 +55,9 @@ class EventRateJob(IJob):
     def filename(self):
         beamname = self._beam_input.name
         geomname = self._geometry.name
-        pdgname = self._gen_config.nu_pdg_name
         outfilename = "_".join(("eventrate",
                                beamname,
                                geomname,
-                               pdgname,
                                )) + ".root"
         return outfilename
 
