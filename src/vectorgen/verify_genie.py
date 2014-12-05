@@ -48,12 +48,12 @@ def run(opt):
     e = "StdHepP4[0][3]"
     pdg = "StdHepPdg[0]"
     pdgsplit = drawoptions.SplitDataset.from_integer_map(pdg, {"#nu_{e}" : 12,
-                                                                          "#bar{#nu_{e}}" : -12,
-                                                                          "#nu_{#mu}" : 14,
-                                                                          "#bar{#nu_{#mu}}" : -14,
-                                                                          })
+                                                               "#bar{#nu_{e}}" : -12,
+                                                               "#nu_{#mu}" : 14,
+                                                               "#bar{#nu_{#mu}}" : -14,
+                                                               })
     weight = drawoptions.EventWeight("1.0")
-    canv = paint.paint("enu", "enu", "{e}".format(e=e), pdgsplit)
+    canv = paint.paint("enu", "enu", "{e}".format(e=e), pdgsplit, drawoptions.UniformBinning(100, 0.0, 15.0))
     _out.save(canv)
     canv = paint.paint("nupdg", "nupdg", pdg, pdgsplit, drawoptions.UniformBinning(31, -15.5, 15.5))
     _out.save(canv)

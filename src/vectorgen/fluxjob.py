@@ -2,6 +2,7 @@ import glob
 import itertools
 import os
 import shutil
+import ROOT
 
 from vectorgen.jobtools import IJob, mirror_file
 from vectorgen.filelock import FileLock
@@ -103,6 +104,25 @@ class MakeFluxLinks(IJob):
             if not os.path.exists(dst):
                 os.symlink(src, dst)
         filelock.release()
+        self._checkfiles()
+        return
+
+    def _checkfiles(self):
+        for fname in self._beam_input.filelist():
+            if self._copy:
+                fname = self._mirror(fname)
+            self._checkbeamfile(fname)
+        return
+
+    def _checkbeamfile(self, fname):
+        tfile = ROOT.TFile(fname)
+        if not tfile.IsOpen():
+            raise Exception("failed to open", fname)
+        tree = tfile.Get("h2000")
+        if not tree:
+            raise Exception("failed to get tree", fname)
+        if not tree.GetEntries():
+            raise Exception("tree has no entries", fname, tree)
         return
 
     def _mirror(self, fname):
