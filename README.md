@@ -61,6 +61,35 @@ Batch mode has only been tested at Warwick. The scripts may need some alteration
 GENIE
 =====
 
+GENIE works in a similar way to NEUT. The script "run_genie.py" takes most of the same arguments as described above for "run_neut.py"
+
+Prerequisities
+--------------
+  * The GENIE environment variable must be set.
+  * You must have compiled and setup GENIE.
+  * The T2K support binaries must have been included in compilation. You can check this by looking for $GENIE/bin/gevgen_t2k. If this does not exist you may need to re-run configure with the enable-t2k option switched on and then recompile.
+  * The GENIE_SPLINES enivronment variable must set and must point to a valid splines file.
+  * The script uses an alternate event generator list called "DefaultWithMEC" which is the same as the default model, but has MEC switched on. This is enabled by adding the following to $GENIE/config/EventGeneratorListAssembler.xml:
+~~~
+  <param_set name="DefaultWithMEC"> 
+     <param type="int" name="NGenerators">   14                                 </param>
+     <param type="alg" name="Generator-0">   genie::EventGenerator/QEL-CC       </param>
+     <param type="alg" name="Generator-1">   genie::EventGenerator/QEL-NC       </param>
+     <param type="alg" name="Generator-2">   genie::EventGenerator/RES-CC       </param>
+     <param type="alg" name="Generator-3">   genie::EventGenerator/RES-NC       </param>
+     <param type="alg" name="Generator-4">   genie::EventGenerator/DIS-CC       </param>
+     <param type="alg" name="Generator-5">   genie::EventGenerator/DIS-NC       </param>
+     <param type="alg" name="Generator-6">   genie::EventGenerator/COH-CC       </param>
+     <param type="alg" name="Generator-7">   genie::EventGenerator/COH-NC       </param>
+     <param type="alg" name="Generator-8">   genie::EventGenerator/DIS-CC-CHARM </param>
+     <param type="alg" name="Generator-9">   genie::EventGenerator/QEL-CC-CHARM </param>
+     <param type="alg" name="Generator-10">  genie::EventGenerator/NUE-EL       </param>
+     <param type="alg" name="Generator-11">  genie::EventGenerator/IMD          </param>
+     <param type="alg" name="Generator-12">  genie::EventGenerator/IMD-ANH      </param>
+     <param type="alg" name="Generator-13">  genie::EventGenerator/MEC-CC       </param>
+     <!-- <param type="alg" name="Generator-14">  genie::EventGenerator/MEC-NC       </param> -->
+  </param_set>
+~~~ 
 
 
 WCSIM
