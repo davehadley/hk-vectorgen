@@ -5,6 +5,7 @@ import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 #imports from this package
 import ntuple
+from progress import printprogress
 
 ################################################################################
 
@@ -23,7 +24,7 @@ def getfilenames(opt):
         #automatically determine output file name
         if not ("genev" in inname and ".root" in inname):
             raise Exception("Cannot automatically determine outputfile name from input. You must specify it manually with the -o option.")
-    outname = inname.replace("genev", "valorinput")
+        outname = inname.replace("genev", "valorinput")
     return inname, outname
 
 
@@ -31,10 +32,13 @@ def getfilenames(opt):
 
 def _load_input_tree(filename):
     #Load input file and get tree
-    infile = ROOT.TFile(inputfile, "READ")
-    intree = infile.Get("nRootTracker") # try to get NEUT tree
+    infile = ROOT.TFile(filename, "READ")
+    #intree = infile.Get("nRooTracker") # try to get NEUT tree
+    #if not intree:
+    #    intree = infile.Get("gRooTracker") # try to get GENIE tree
+    intree = infile.Get("titus_ntuple")
     if not intree:
-        intree = infile.Get("gRooTracker") # try to get GENIE tree
+        raise Exception("could not load TTree from file", filename)
     return infile, intree
 
 ################################################################################
@@ -43,12 +47,12 @@ class OutputTree:
     def __init__(self, tree):
         self._tree = tree
         #Pdg, Mode, Enu, EnuReco
-        Pdg = ntuple.BranchPrimitive("Pdg", tree, 0.0)
-        Mode = ntuple.BranchPrimitive("Mode", tree, 0.0)
-        Enu = ntuple.BranchPrimitive("Enu", tree, 0.0)
-        EnuReco = ntuple.BranchPrimitive("EnuReco", tree, 0.0)
-        Weight1RMu = ntuple.BranchPrimitive("Weight1RMu", tree, 0.0)
-        Weight1Re = ntuple.BranchPrimitive("Weight1Re", tree, 0.0)
+        self.Pdg = ntuple.BranchPrimitive("Pdg", tree, 0.0)
+        self.Mode = ntuple.BranchPrimitive("Mode", tree, 0.0)
+        self.Enu = ntuple.BranchPrimitive("Enu", tree, 0.0)
+        self.EnuReco = ntuple.BranchPrimitive("EnuReco", tree, 0.0)
+        self.Weight1RMu = ntuple.BranchPrimitive("Weight1RMu", tree, 0.0)
+        self.Weight1Re = ntuple.BranchPrimitive("Weight1Re", tree, 0.0)
 
     def Fill(self):
         return self._tree.Fill()
@@ -70,28 +74,31 @@ class OutputTree:
 
 def _setup_output_tree(filename):
     tfile = ROOT.TFile(filename, "RECREATE")
+    print filename
     tree = ROOT.TTree("selection_tree", "selection_tree")
+    tree = OutputTree(tree)
     return tfile, tree
 
 ################################################################################
 
 def _copy_tree_variables(event, outtree):
-    outtree.SetValues(Pdg=,
-                      Mode=,
-                      Enu=,
-                      EnuReco=,
-                      Weight1RMu=,
-                      Weight1Re=,
+    outtree.SetValues(Pdg=event.true_nu_pdg,
+                      Mode=event.true_reaction_code,
+                      Enu=event.true_nu_e,
+                      EnuReco=event.reco_enuqe_muon,
+                      Weight1RMu=event.weight_selection_muon,
+                      Weight1Re=event.weight_selection_electron,
                   )
     return
 
 ################################################################################
 
 def convert_nd280neut_to_valor(inputfile, outputfile):
-    infile, intree = _load_input_tree(inputfilename)
+    infile, intree = _load_input_tree(inputfile)
     outfile, outtree = _setup_output_tree(outputfile)
-    for event in intree:
-        if event.detector = 0:
+    iterevents = printprogress("create_valor", intree.GetEntries(), intree)
+    for event in iterevents:
+        if event.experiment == 0:
             _copy_tree_variables(event, outtree)
             outtree.Fill()
     outtree.Write()
@@ -102,7 +109,7 @@ def convert_nd280neut_to_valor(inputfile, outputfile):
 
 def main():
     cml = parsecml()
-    inname, outname = getfilenames(opt)
+    inname, outname = getfilenames(cml)
     convert_nd280neut_to_valor(inname, outname)
     return
 
